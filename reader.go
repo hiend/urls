@@ -5,18 +5,19 @@ import (
 	"os"
 )
 
-func reader(path string, channel chan string) {
-	file, err := os.Open(path)
+func reader(input string, urls chan string) {
+	defer close(urls)
+
+	file, err := os.Open(input)
 	if err != nil {
 		panic(err)
 	}
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
-	defer close(channel)
 
 	for scanner.Scan() {
-		channel <- scanner.Text()
+		urls <- scanner.Text()
 	}
 
 	if err = scanner.Err(); err != nil {

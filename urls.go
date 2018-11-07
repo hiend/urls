@@ -4,9 +4,10 @@ import (
 	"github.com/urfave/cli"
 	"log"
 	"os"
+	"sync"
 )
 
-var VERSION = "0.1.0"
+var VERSION = "0.1.1"
 
 func main() {
 	app := cli.NewApp()
@@ -19,18 +20,30 @@ func main() {
 		cli.StringFlag{Name: "input, i", Value: "input.txt", Usage: "Path to the input file"},
 		cli.StringFlag{Name: "output, o", Value: "output.txt", Usage: "Path to the output file"},
 		cli.StringFlag{Name: "format, f", Value: "plain", Usage: "Output format (plain or json)"},
+		cli.IntFlag{Name: "parallel, p", Value: 10, Usage: "Count of parallel threads"},
 	}
 
-	app.Action = urls
+	app.Action = func(c *cli.Context) error {
+		parallel := c.Int("parallel")
+		urls, responses := make(chan string), make(chan *Response, parallel)
+
+		go reader(c.String("input"), urls)
+		go writer(c.String("output"), c.String("format"), responses)
+
+		var wait sync.WaitGroup
+		for i := parallel; i >= 0; i-- {
+			wait.Add(1)
+			go func() {
+				scraper(urls, responses)
+				wait.Done()
+			}()
+		}
+		wait.Wait()
+
+		return nil
+	}
 
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
 	}
-}
-
-func urls(c *cli.Context) error {
-	results := make(chan string)
-	go reader(c.String("input"), results)
-	parser(c.String("output"), results, c.String("format"))
-	return nil
 }
