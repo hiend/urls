@@ -10,12 +10,14 @@ import (
 )
 
 type Response struct {
-	*http.Response
+	Url     string
+	Status  int
 	Latency float64 // in seconds
+	Headers http.Header
 }
 
 func (r Response) String() string {
-	return fmt.Sprintf("%d,%f,%+v", r.Status, r.Latency, r.Header)
+	return fmt.Sprintf("%s,%d,%f,%+v", r.Url, r.Status, r.Latency, r.Headers)
 }
 
 func scraper(urls chan string, responses chan *Response) {
@@ -46,8 +48,10 @@ func scraper(urls chan string, responses chan *Response) {
 		response.Body.Close()
 
 		responses <- &Response{
-			Latency:  time.Since(start).Seconds(),
-			Response: response,
+			Url:     urlStr,
+			Status:  response.StatusCode,
+			Latency: time.Since(start).Seconds(),
+			Headers: response.Header,
 		}
 	}
 }

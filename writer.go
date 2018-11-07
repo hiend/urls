@@ -4,10 +4,11 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 )
 
-func writer(path string, format string, responses chan *Response) error {
+func writer(path string, format string, responses chan *Response) {
 	file, err := os.Create(path)
 	if err != nil {
 		panic(err)
@@ -18,24 +19,26 @@ func writer(path string, format string, responses chan *Response) error {
 	defer writer.Flush()
 
 	if format == "json" {
-		return jsonWriter(writer, responses)
+		jsonWriter(writer, responses)
 	} else {
-		return plainWriter(writer, responses)
+		plainWriter(writer, responses)
 	}
+
 }
 
-func jsonWriter(writer *bufio.Writer, responses chan *Response) error {
+func jsonWriter(writer *bufio.Writer, responses chan *Response) {
 	writer.WriteString("[")
 	defer writer.WriteString("]")
 
-	return jsonWriterIn(writer, responses)
+	jsonWriterIn(writer, responses)
 }
 
-func jsonWriterIn(writer *bufio.Writer, responses chan *Response) error {
+func jsonWriterIn(writer *bufio.Writer, responses chan *Response) {
 	first := true
 	for response := range responses {
 		data, err := json.Marshal(response)
 		if err != nil {
+			log.Println(err)
 			continue
 		}
 		if first == false {
@@ -45,12 +48,10 @@ func jsonWriterIn(writer *bufio.Writer, responses chan *Response) error {
 		}
 		writer.Write(data)
 	}
-	return nil
 }
 
-func plainWriter(writer *bufio.Writer, responses chan *Response) error {
+func plainWriter(writer *bufio.Writer, responses chan *Response) {
 	for response := range responses {
 		fmt.Fprintf(writer, "%+v\n", response)
 	}
-	return nil
 }

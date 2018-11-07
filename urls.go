@@ -28,7 +28,12 @@ func main() {
 		urls, responses := make(chan string), make(chan *Response, parallel)
 
 		go reader(c.String("input"), urls)
-		go writer(c.String("output"), c.String("format"), responses)
+
+		quit := make(chan bool)
+		go func() {
+			writer(c.String("output"), c.String("format"), responses)
+			quit <- true
+		}()
 
 		var wait sync.WaitGroup
 		for i := parallel; i >= 0; i-- {
@@ -39,6 +44,9 @@ func main() {
 			}()
 		}
 		wait.Wait()
+		close(responses)
+
+		<-quit
 
 		return nil
 	}
